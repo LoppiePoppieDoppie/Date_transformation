@@ -80,9 +80,9 @@ def enchantment(df):
     
     # if lower
     else:
-        dt = date.pop('actual_date')
+        dr = date.pop('actual_date')
         df = date.loc[date.index.repeat(dr.str.len())]
-        df[['date_start','date_end']] = pd.DataFrame(np.concatenate(s), index = df.index)
+        df[['date_start','date_end']] = pd.DataFrame(np.concatenate(dr), index = df.index)
         df = df.reset_index(drop = True)
 
     date_final.drop(['tuple', 'shit'], axis = 1, inplace = True)
