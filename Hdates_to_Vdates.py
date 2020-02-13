@@ -58,17 +58,16 @@ def enchantment(df):
     date = df.iloc[:, 1: len(df)]
     date['tuple'] = [list(np.where(date.iloc[row] == 1)[0]) for row in range(len(date))]
     # get stard and end of where 1 start and end
-    def make_shit(x):   
+    def make_date(x):   
         s = pd.Series(x)   
         return s.groupby(s.diff().ne(1).cumsum()).agg(['first','last']).values.tolist()
 
-    date['shit'] = date['tuple'].apply(make_shit)
+    date['transformed'] = date['tuple'].apply(make_date)
     # replace idx with dates
-    date = date.assign(actual_date = date['shit'])
+    date = date.assign(actual_date = date['transformed'])
     
     val = pd.Timestamp('2000-01-01 00:00:00', freq = 'MS')
-    date['actual_date'] = date['shit']\
-                                .apply(lambda x: [[date_dict.get(key, val) for key in y] for y in x])
+    date['actual_date'] = date['transformed'].apply(lambda x: [[date_dict.get(key, val) for key in y] for y in x])
     # add identifier
     date['identifier'] = merged['identifier']
     
@@ -76,7 +75,7 @@ def enchantment(df):
     if re.findall(r'\d+', pd.__version__)[1] == '25':
         date_final = date.explode('actual_date')
         date_final[['start_date', 'end_date']] = pd.DataFrame(date_final.pop('actual_date')\
-                                                    .values.tolist(), index = date_final.index)
+                                                              .values.tolist(), index = date_final.index)
     
     # if lower
     else:
@@ -85,7 +84,7 @@ def enchantment(df):
         df[['date_start','date_end']] = pd.DataFrame(np.concatenate(dr), index = df.index)
         df = df.reset_index(drop = True)
 
-    date_final.drop(['tuple', 'shit'], axis = 1, inplace = True)
+    date_final.drop(['tuple', 'transformed'], axis = 1, inplace = True)
            
     return date_final
 
