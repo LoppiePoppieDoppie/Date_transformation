@@ -19,9 +19,9 @@ warnings.filterwarnings('ignore')
 ############################ make lm models for each config in pool ############################
 
 
-def model_selection(file_name, date_time_col, max_date_num_col, const_features, to_rotate, regex_decode, save):
+def model_selection(file_name, date_col, min_date_value, max_date_value, const_features, to_rotate, regex_decode, nfolds, save):
     '''
-    test different features combinations by fitting rotating features to linear regression from the pool and cross-validate on 5 folds
+    test different features combinations by fitting rotating features to linear regression from the pool
     
     args:
         file_name           - {str} name of the file with transformed features
@@ -29,7 +29,8 @@ def model_selection(file_name, date_time_col, max_date_num_col, const_features, 
         max_date_num_col    - {int} last number [date_time] value / n_observation
         const_features      - {list} of constant features that don't have to be rotated !!!Y_val HAVE TO BE FIRST IN LIST!!!
         to_rotate           - {list} list of regular expressions for each media feature to rotate ['SUB_OLV_Imp_d0.?[2-8]', 'SUB_OOH_d0.?[2-8]']
-        regex_decode        - {list} list of media to rotate in normal form ['OLV', 'OOH']
+        regex_decode        - {list} list of media to rotate in normal view ['OLV', 'OOH']
+        nfolds              - {int} number of splits
         save                - {str} name of file to save with
         
     return:
@@ -43,10 +44,15 @@ def model_selection(file_name, date_time_col, max_date_num_col, const_features, 
         data = pd.read_excel('%s.xlsx'%(file_name), encoding = 'cp1251')
     
     # set modeling period 
-    if not (date_time_col and max_date_num_col):
+    if not (date_col and max_date_value and min_date_value):
         df = data
     else:
-        df = data[data[date_time_col] <= int(max_date_num_col)]
+        df = data
+        try:
+            df[date_col] = pd.to_datetime(df[date_col], format = '%Y-%m-%d')
+        except ValueError:
+            df[date_col] = pd.to_datetime(df[date_col], format = '%d-%m-%Y')
+        df = df[(df[date_col] >= min_date_value) & (df[date_col] < max_date_value)]
     
     # rotating and costant features pools
     df_list = [df.filter(regex = regexp) for regexp in to_rotate]
@@ -55,9 +61,9 @@ def model_selection(file_name, date_time_col, max_date_num_col, const_features, 
     combinations = list(itr.product(*df_list))
     print('combinations: ', len(combinations), '\n', 'minutes:  ', len(combinations) * 320 * 0.001 / 60)
     
-    def time_cv(X, scorer = ''):
+    def time_cv(X, nfolds, scorer = ''):
         '''time series cross validation stratagy'''
-        tscv = TimeSeriesSplit(n_splits = 5)
+        tscv = TimeSeriesSplit(n_splits = nfolds)
         score = cross_val_score(lm, X, y, cv = tscv, scoring = '%s'%(scorer))
         return (-score.mean())
     
@@ -82,7 +88,7 @@ def model_selection(file_name, date_time_col, max_date_num_col, const_features, 
         # Metrics
         r2 = r2_score(y, predictions)
         mse_train = mean_squared_error(y, predictions)
-        mse_cv = time_cv(X = X_const, scorer = 'neg_mean_squared_error')
+        mse_cv = time_cv(X = X_const, scorer = 'neg_mean_squared_error', nfolds = nfolds)
         # Table
         summary = pd.DataFrame({'comb': [comb] * len(X_const.columns.tolist()), 
                                 'feature_name': ['const'] + X.columns.tolist(),
@@ -109,7 +115,7 @@ def model_selection(file_name, date_time_col, max_date_num_col, const_features, 
     stats_table = total.iloc[:, [0, 1, 2, 8]]
     for_pivot = stats_table[stats_table['feature_name'].isin(media_list)]
     comb_col = for_pivot.iloc[:, 0]              # combination's column
-    to_replace_table = for_pivot.iloc[:, 1:]     # rotated features table
+    to_replace_table = for_pivot.iloc[:, 1:]    # rotated features table
     
     for regexp, regex_de in zip(to_rotate, regex_decode):
         to_replace_table.replace(regex = {regexp: regex_de}, inplace = True)
@@ -121,8 +127,7 @@ def model_selection(file_name, date_time_col, max_date_num_col, const_features, 
     if len(to_rotate) > 1:
         res = sorted_pivoted.iloc[:, :-(len(to_rotate)-1)]
     elif len(to_rotate) == 1:
-        res = sorted_pivoted  
-        
+        res = sorted_pivoted
     if save:
         res.to_csv('%s.csv'%(save), sep = ';', encoding = 'cp1251')
     
