@@ -59,7 +59,7 @@ def model_selection(file_name, date_col, min_date_value, max_date_value, const_f
     data_base = df[const_features]
  
     combinations = list(itr.product(*df_list))
-    print('combinations: ', len(combinations), '\n', 'minutes:  ', len(combinations) * 320 * 0.001 / 60)
+    print('combinations: ', len(combinations), '\nminutes:  ', len(combinations) * 320 * 0.001 / 60)
     
     def time_cv(X, nfolds, scorer = ''):
         '''time series cross validation stratagy'''
@@ -68,9 +68,11 @@ def model_selection(file_name, date_col, min_date_value, max_date_value, const_f
         return (-score.mean())
     
     # total_summary table filling loop
+    count = 0
     total = []
     y = data_base.iloc[:, 0]
-    for comb in combinations:  
+    for comb in combinations: 
+        count =+1
         X = df[data_base.iloc[:, 1:].columns.tolist() + list(comb)]
         lm = LinearRegression()
         lm.fit(X, y)
@@ -102,6 +104,7 @@ def model_selection(file_name, date_col, min_date_value, max_date_value, const_f
                                })
     
         total.append(summary)
+        print(np.round(count/len(combinations) * 100, 2), '% of combinations done', end = '\r')
     total = pd.concat(total)
     
     
