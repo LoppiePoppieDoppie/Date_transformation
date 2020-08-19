@@ -34,7 +34,7 @@ def dist_array(rows, cols, lat_obj1, lat_obj2, long_obj1, long_obj2):
     for i in range(rows):
         for j in range(cols):
             res[i, j] = np.arccos(np.sin(np.radians(lat_obj1[i])) * np.sin(np.radians(lat_obj2[j])) +\
-                                  np.cos(np.radiana(lat_obj1[i])) * np.cos(np.radians(lat_obj2[j])) *\
+                                  np.cos(np.radians(lat_obj1[i])) * np.cos(np.radians(lat_obj2[j])) *\
                         np.cos(np.radians(long_obj1[i] - long_obj2[j]))) * 6371210
     
     return res
@@ -105,7 +105,7 @@ def nearest_monday(open_date, close_date, monday_start = '', monday_end = ''):
     
     # find closest monday for object
     def closest(*args, date_list):
-        res0 = [monday_greg[np.abs((i - monday_greg)).argmin()] for i in range(date_list)]
+        res0 = [monday_greg[np.abs((i - monday_greg)).argmin()] for i in date_list]
         res = list(map(lambda x: datetime.datetime.fromordinal(x), res0))
         return res
     
@@ -118,7 +118,7 @@ def nearest_monday(open_date, close_date, monday_start = '', monday_end = ''):
 
 
 def dist_feature(file_name, client, competitor, competitor_latitude, client_latitude, competitor_longitude, client_longitude, 
-                 threshold_tuple, open_date, close_date, model_start_date, model_end_date):
+                 threshold_tuple, opened_date, closed_date, model_start_date, model_end_date):
     '''
     from previously defined functions get competitor object open and close dates, and according to binary array fill in list with:
         - 1 for competitor period(open, close) if there are competitors objects opened for [i] client's object
@@ -171,8 +171,8 @@ def dist_feature(file_name, client, competitor, competitor_latitude, client_lati
     # select columns with longitude for each object
     long_obj1, long_obj2 = df[competitor_longitude].dropna().values, df[client_longitude].dropna().values
     # select columns with open and close date of the second object
-    open_date = df[open_date].dropna()
-    close_date = df.iloc[: len(open_date), ]
+    open_date = df[opened_date].dropna()
+    close_date = df.iloc[: len(open_date), ][closed_date]
     
     ####################### init all funcs ####################### 
     open_, close_, monday_ = nearest_monday(open_date, close_date, model_start_date, model_end_date)
